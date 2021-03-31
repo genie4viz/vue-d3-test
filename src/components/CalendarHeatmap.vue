@@ -1,4 +1,4 @@
-<template>
+<template>  
   <div ref="heatmapContainerEl" :class="{'calendar-heatmap-container': true}">
     <b-skeleton :animated="true" :height="height" width="100%" v-if="isLoading" />
     <svg v-show="!isLoading" class="heatmap" :class="{'debugging': debugging}" width="100%" :height="height" v-on="listeners" ref="svgEl">
@@ -27,6 +27,21 @@
   };
 
   // javascript datetime/d3 path helpers
+  function inRange(curDate, date1, date2) {
+    let startDate = null;
+    let endDate = null;
+    if (date1.getTime() < date2.getTime()) {
+      startDate = date1;
+      endDate = date2;
+    } else {
+      startDate = date2;
+      endDate = date1;
+    }
+    if (curDate.getTime() <= endDate.getTime() && curDate.getTime() >= startDate.getTime()) {
+      return true;
+    }
+    return false;
+  }
   const countDay = (i) => (i + 6) % 7;
   const formatDay = (i) => 'SMTWTFS'[i];
   function pathMonth(t0, cellSize) {
@@ -96,6 +111,8 @@
         containerWidth: 0,
         lastHoverDate: null,
         rangeSelection: null,
+        startDate: null,
+        curDate: null,
       };
     },
     watch: {
@@ -133,7 +150,7 @@
           .remove();
 
         if (this.data.length === 0) return;
-
+                
         // draw week days
         d3.select(heatmapBodyEl)
           .append('g')
@@ -149,16 +166,20 @@
           .text(formatDay);
 
         // draw rectangles
+        
         d3.select(heatmapBodyEl)
           .selectAll('rect')
           .data(that.data)
-          .join('rect')
+          .join('rect')          
           .attr('class', 'day-rect')
           .style('fill', (d) => that.color(d.value))
           .attr('width', that.cellSize - that.cellSpacing)
           .attr('height', that.cellSize - that.cellSpacing)
           .attr('x', (d) => d3.utcMonday.count(d3.utcYear(d.date), d.date) * that.cellSize + (that.cellSpacing / 2))
-          .attr('y', (d) => countDay(d.date.getUTCDay()) * that.cellSize + (that.cellSpacing / 2));
+          .attr('y', (d) => countDay(d.date.getUTCDay()) * that.cellSize + (that.cellSpacing / 2))
+          .on('mousedown', that.mouseDown)
+          .on('mousemove', that.mouseMove)
+          .on('mouseup', that.mouseUp);
 
         // insert month containers
         const month = d3.select(heatmapBodyEl)
@@ -210,21 +231,41 @@
         d3.select(heatmapBodyEl)
           .selectAll('rect')
           .classed('selected', false);
-        this.rangeSelection = null;
+        this.rangeSelection = null;        
         this.$emit('selection', null);
       },
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      mouseMove(mouseEvent) {
-        // TODO: implement logic
+      mouseMove(mouseEvent, d) {     
+        // TODO: implement logic  
+        if (!this.startDate || !d) return;
+        if (d.date === this.curDate) return;
+        const that = this;
+        const { heatmapBodyEl } = this.$refs;
+        d3.select(heatmapBodyEl).selectAll('.day-rect').each(function recty(rect) {
+          if (inRange(rect.date, that.startDate, d.date)) {
+            d3.select(this).classed('selected', true);
+          } else {
+            d3.select(this).classed('selected', false);
+          }
+        });
+        this.curDate = d.date;
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      mouseDown(mouseEvent) {
+      mouseDown(mouseEvent, d) {
         // TODO: implement logic
+        this.resetSelection();
+        if (!d) return;
+        this.startDate = d.date;
+        this.curDate = null;
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       mouseUp(mouseEvent) {
         // TODO: implement logic
+        if (!this.startDate) return;
+        this.rangeSelection = [this.startDate, this.curDate];
+        this.$emit('selection', this.rangeSelection);
+        this.startDate = null;
       },
     },
     computed: {
@@ -269,7 +310,7 @@
 
 <style lang="scss" scoped>
   @import "./../buefyStyles";
-
+  
   .calendar-heatmap-container {
 
     .heatmap {
