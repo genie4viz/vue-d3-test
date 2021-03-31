@@ -1,0 +1,13 @@
+// Import Bulma's core
+@import "~bulma/sass/utilities/_all";
+
+// Import Bulma and Buefy styles
+@import "~bulma";
+@import "~buefy/src/scss/buefy";
+
+$js-color-yellow: #F5A623;
+$js-color-white: #AEAEBA;
+$js-color-style-one: #2F363D;
+$js-color-style-two: #24292E;  
+$js-color-gray-2: #6F6F6F;
+$el-spacing: 16px;
