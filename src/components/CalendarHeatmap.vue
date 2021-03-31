@@ -109,10 +109,7 @@
       return {
         height: INITIAL_HEIGHT,
         containerWidth: 0,
-        lastHoverDate: null,
         rangeSelection: null,
-        startDate: null,
-        curDate: null,
       };
     },
     watch: {
@@ -236,36 +233,38 @@
       },
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      mouseMove(mouseEvent, d) {     
-        // TODO: implement logic  
-        if (!this.startDate || !d) return;
-        if (d.date === this.curDate) return;
+      mouseMove(mouseEvent, d) {        
+        // TODO: implement logic
+        mouseEvent.stopPropagation();
+        if (!this.rangeSelection || !d) return;
+        // prevent to calculate following section repeatedly, if we do not, when keep moving on same rect, it calls this section repeatedly.
+        if (d.date === this.rangeSelection[1]) return;        
         const that = this;
         const { heatmapBodyEl } = this.$refs;
         d3.select(heatmapBodyEl).selectAll('.day-rect').each(function recty(rect) {
-          if (inRange(rect.date, that.startDate, d.date)) {
+          if (inRange(rect.date, that.rangeSelection[0], d.date)) {
             d3.select(this).classed('selected', true);
           } else {
             d3.select(this).classed('selected', false);
           }
         });
-        this.curDate = d.date;
+        this.rangeSelection[1] = d.date;
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       mouseDown(mouseEvent, d) {
         // TODO: implement logic
-        this.resetSelection();
+        mouseEvent.stopPropagation();
         if (!d) return;
-        this.startDate = d.date;
-        this.curDate = null;
+        this.resetSelection();
+        this.rangeSelection = [d.date, null];
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       mouseUp(mouseEvent) {
         // TODO: implement logic
-        if (!this.startDate) return;
-        this.rangeSelection = [this.startDate, this.curDate];
+        mouseEvent.stopPropagation();
+        if (!this.rangeSelection) return;
         this.$emit('selection', this.rangeSelection);
-        this.startDate = null;
+        this.rangeSelection = null;
       },
     },
     computed: {
@@ -311,6 +310,10 @@
 <style lang="scss" scoped>
   @import "./../buefyStyles";
   
+  svg text {
+    user-select: none;
+  }
+
   .calendar-heatmap-container {
 
     .heatmap {
@@ -329,6 +332,13 @@
         & ::v-deep .moy {
           fill: $js-color-white;
           font-size: 0.7em;
+        }
+        & ::v-deep .noselect {
+          -webkit-user-select: none;
+          -khtml-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
         }
         & ::v-deep .day-rect {
           fill: $js-color-style-two;

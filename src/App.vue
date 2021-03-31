@@ -52,7 +52,7 @@
       },
       handleSelection(selection) {
         // ! NOTE: do not allow point selection for now
-        this.currentSelection = selection && selection.length === 2 ? selection : null;
+        this.currentSelection = selection && selection.length === 2 ? selection.sort((a, b) => a - b) : null;
       },
       notify(text) {
         this.$buefy.toast.open(text);
